@@ -1,5 +1,6 @@
 const fs = require("fs");
 const uuidv4 = require('uuid/v4');
+const _ = require('underscore');
 
 
 /**
@@ -26,7 +27,7 @@ const getLocaleConfigJson = function (arr) {
  */
 const delBr = function (arr) {
     return arr.map((item) => {
-        return item.slice(0, -2);
+        return item.slice(0, -1);
     })
 }
 
@@ -95,10 +96,9 @@ const getLocalePropertiesStr = function (localeConfigJson) {
 
     for (let key in localeConfigJson) {
         if (localeConfigJson.hasOwnProperty(key) === true) {
-            localeConfigJson = key + ':' + localeConfigJson(key) + '/n';
+            localePropertiesStr = key + ':' + localeConfigJson[key] + '\n' + localePropertiesStr;
         }
     }
-
     return localePropertiesStr;
 }
 
@@ -136,20 +136,21 @@ fs.readFile('./files/test.html', (err, data) => {
         localeConfigArr = getLocaleConfigArr(localeConfigStr);
         localeConfigArrWithOutBr = delBr(localeConfigArr);
         localeConfigJson = getLocaleConfigJson(localeConfigArrWithOutBr);
-        console.log('localeConfigJson', localeConfigJson);
 
-        localeConfigJson = getLocaleArr(filterCN, localeConfigJson).localeConfigJson;
-        console.log('locallocaleConfigJsoneArr', localeConfigJson);
+        let newObj = getLocaleArr(filterCN, localeConfigJson);
 
-        localeArr = getLocaleArr(filterCN, localeConfigJson).getLocaleArr;
-        console.log('localeArr', localeArr);
+        localeConfigJson = newObj.localeConfigJson;
+        localeArr = newObj.localeArr;
 
+        localeArr = _.sortBy(localeArr, function (item) {
+            return -item.value.length;
+        })
+
+        let newProperties = getLocalePropertiesStr(localeConfigJson);
 
         // json格式 => 国际化配置文件
-
-
         //写入
-        fs.writeFile('./files/translate/supplier-zh-CN.properties', getLocalePropertiesStr(localeConfigJson), function (err) {
+        fs.writeFile('./files/translate/supplier-zh-CN.properties', newProperties, function (err) {
             if (err) {
                 return console.error(err);
             }
@@ -161,7 +162,7 @@ fs.readFile('./files/test.html', (err, data) => {
         // 特殊字符添加反斜杠
         const rules = ['\\', '/', '^', '$', '*', '+', '?', '|', '[', ']', '(', ')']
 
-        let newHtml;
+        let newHtml = oldHtml;
 
         localeArr.forEach((item) => {
             const newNameArr = item.value.split('');
@@ -177,7 +178,7 @@ fs.readFile('./files/test.html', (err, data) => {
 
             const newReg = new RegExp(newFilerItem.join('') + `(?!\\s-->)`);
 
-            newHtml = oldHtml.replace(newReg, `{$t('`+ item.key + `')}`);
+            newHtml = newHtml.replace(newReg, `{$t('`+ item.key + `')}`);
 
         })
 
